@@ -22,6 +22,25 @@ export function initBossList() {
   const spawnHourType = document.getElementById("spawnHourType");
   const spawnScheduleType = document.getElementById("spawnScheduleType");
 
+  const fixedScheduleBosses = [
+    { bossName: "CLEMANTIS", guild: "Faction", bossSchedule: "Monday 11:30" },
+    { bossName: "CLEMANTIS", guild: "Faction", bossSchedule: "Thursday 19:00" },
+    { bossName: "SAPHIRUS", guild: "Faction", bossSchedule: "Sunday 17:00" },
+    { bossName: "SAPHIRUS", guild: "Faction", bossSchedule: "Tuesday 11:30" },
+    { bossName: "NEUTRO", guild: "Faction", bossSchedule: "Tuesday 19:00" },
+    { bossName: "NEUTRO", guild: "Faction", bossSchedule: "Thursday 11:30" },
+    { bossName: "THYMELE", guild: "Faction", bossSchedule: "Monday 19:00" },
+    { bossName: "THYMELE", guild: "Faction", bossSchedule: "Wednesday 11:30" },
+    { bossName: "MILAVY", guild: "Faction", bossSchedule: "Saturday 15:00" },
+    { bossName: "RINGOR", guild: "Faction", bossSchedule: "Saturday 17:00" },
+    { bossName: "RODERICK", guild: "Faction", bossSchedule: "Friday 19:00" },
+    { bossName: "AURAQ", guild: "Faction", bossSchedule: "Friday 22:00" },
+    { bossName: "AURAQ", guild: "Faction", bossSchedule: "Wednesday 21:00" },
+    { bossName: "CHAIFLOCK", guild: "Faction", bossSchedule: "Saturday 22:00" },
+    { bossName: "BENJI", guild: "Faction", bossSchedule: "Sunday 21:00" },
+  ];
+
+
   // ✅ Utility: Convert stored timestamps into datetime-local inputs
   function toDatetimeLocalInput(stored) {
     if (!stored) return "";
@@ -85,6 +104,97 @@ export function initBossList() {
     candidate.setDate(candidate.getDate() + diff);
     return candidate;
   }
+
+  // ✅ Automatically reset boss after spawn
+  async function autoResetOrDeleteBoss(entry, key) {
+    if (!entry.nextSpawn || processedBosses.has(key)) return;
+
+    const now = new Date();
+    const nextSpawn = new Date(entry.nextSpawn);
+    if (isNaN(nextSpawn)) return;
+
+
+    // ⚡ Trigger if spawn is within 30s in the past or already passed
+    const diffMs = now - nextSpawn;
+
+    // ⚡ Trigger only if spawn just passed (within 30s)
+    if (diffMs >= 0 && diffMs <= 30000) {
+      console.log(`⏳ ${entry.bossName} spawn time passed ${Math.floor(diffMs / 1000)}s ago. Auto-processing...`);
+
+      // Run after 30s grace delay
+      setTimeout(async () => {
+        const bossRef = ref(db, "bosses/" + key);
+
+        if (entry.bossHour && !entry.bossSchedule) {
+          const newLastKilled = new Date();
+          const nextSpawnTime = new Date(newLastKilled.getTime() + entry.bossHour * 60 * 60 * 1000);
+
+          await update(bossRef, {
+            lastKilled: newLastKilled.toISOString(),
+            nextSpawn: nextSpawnTime.toISOString(),
+          });
+
+          console.log(`✅ Auto-reset done for ${entry.bossName}`);
+        } else if (entry.bossSchedule && !entry.bossHour) {
+          await remove(bossRef);
+          console.log(`🗑️ Auto-deleted schedule-based boss "${entry.bossName}" after spawn.`);
+        }
+      }, 10000); // ⏱️ 30 seconds grace delay
+    }
+  }
+
+  async function repopulateWeeklyScheduleBosses(force = false) {
+    try {
+      const now = new Date();
+      const day = now.getDay(); // 1 = Monday
+      const hour = now.getHours();
+
+      // ✅ Allow manual override (force = true)
+      if (!force && !(day === 1 && hour >= 1)) {
+        console.log("⏸️ Not Monday 1AM yet — skipping repopulation.");
+        return;
+      }
+
+      const bossesRef = ref(db, "bosses");
+      const snapshot = await get(bossesRef);
+      const existing = [];
+
+      if (snapshot.exists()) {
+        snapshot.forEach((child) => {
+          const b = child.val();
+          if (b.bossSchedule) {
+            existing.push(`${b.bossName}_${b.bossSchedule}`);
+          }
+        });
+      }
+
+      let added = 0;
+      for (const b of fixedScheduleBosses) {
+        const key = `${b.bossName}_${b.bossSchedule}`;
+        if (!existing.includes(key)) {
+          const next = getNextScheduledSpawn(b.bossSchedule);
+          await push(bossesRef, {
+            bossName: b.bossName,
+            guild: b.guild,
+            bossSchedule: b.bossSchedule,
+            nextSpawn: next ? next.toISOString() : "",
+            bossHour: "",
+            lastKilled: "",
+          });
+          added++;
+        }
+      }
+
+      if (added > 0) {
+        console.log(`🆕 Repopulated ${added} fixed-schedule bosses.`);
+      } else {
+        console.log("✅ All fixed-schedule bosses already exist.");
+      }
+    } catch (err) {
+      console.error("⚠️ Failed to repopulate weekly schedule bosses:", err);
+    }
+  }
+
 
   // ✅ Toggle Hour/Schedule UI
   function updateSpawnTypeUI() {
@@ -153,6 +263,11 @@ export function initBossList() {
 
       b._ts = isNaN(ts) ? Infinity : ts;
       bosses.push(b);
+
+      // ✅ Check if boss should auto-reset
+      if (b.nextSpawn && b.nextSpawn !== "--") {
+        autoResetOrDeleteBoss(b, key);
+      }
     });
 
     bosses.sort((a, b) => a._ts - b._ts);
@@ -262,4 +377,23 @@ export function initBossList() {
       });
     });
   });
+
+  window.addEventListener("load", () => {
+    repopulateWeeklyScheduleBosses();
+  });
+
+  // Recheck every 15 seconds for smoother timing
+  setInterval(async () => {
+    const bossesRef = ref(db, "bosses");
+    const snapshot = await get(bossesRef);
+    snapshot.forEach((child) => {
+      const key = child.key;
+      const b = child.val();
+      autoResetOrDeleteBoss(b, key);
+    });
+  }, 10000);
+
+  // ✅ make it callable from console or other scripts
+  window.repopulateWeeklyScheduleBosses = repopulateWeeklyScheduleBosses;
 }
+

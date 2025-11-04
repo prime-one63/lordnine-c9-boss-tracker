@@ -193,6 +193,12 @@ async function fetchAndRenderBosses() {
         LADYDALIA: "img/lady_dalia.png",
         GENAQULUES: "img/gen_aquleus.png",
         GENERALAQULES: "img/gen_aquleus.png",
+        AURAQ: "img/auraq.png",
+        MILAVY: "img/milavy.png",
+        CHAIFLOCK: "img/chaiflock.png",
+        RODERICK: "img/roderick.png",
+        RINGOR: "img/ringor.png",
+        BENJI: "img/benji.png",
       };
 
       const normalizedName = normalizeBossName(b.bossName);
