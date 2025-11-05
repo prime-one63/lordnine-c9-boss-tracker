@@ -1,7 +1,14 @@
 <div id="bossListSection">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>Boss List Tracker</h3>
-    <button class="btn btn-success btn-add" data-bs-toggle="modal" data-bs-target="#bossModal" id="btnAdd">+ Add Boss</button>
+    <h3 class="mb-0">Boss List Tracker</h3>
+    <div class="d-flex gap-2">
+      <button id="btnRepopulate" class="btn btn-success btn-sm">
+        ♻ Repopulate Schedule
+      </button>
+      <button id="btnAdd" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#bossModal">
+        ➕ Add Boss
+      </button>
+    </div>
   </div>
 
   <div class="card p-3">

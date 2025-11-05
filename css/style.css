@@ -89,6 +89,17 @@ p.countdown {
   text-transform: uppercase;
   white-space: nowrap;
 }
+
+#btnRepopulate {
+  background-color: #28a745;
+  border: none;
+  color: white;
+  font-weight: 500;
+}
+#btnRepopulate:hover {
+  background-color: #218838;
+}
+
 /* Color variants */
 .guild-badge.Cloud9 { background-color: #00bfff; }
 .guild-badge.Midnight { background-color: #15388577; }
