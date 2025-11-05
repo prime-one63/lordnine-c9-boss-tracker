@@ -284,17 +284,63 @@ export function initBossList() {
       console.log("Form cleared successfully!");
     }
 
-    // ✅ Manual repopulate button
+    // ✅ Manual repopulate button (safe duplicate-checked version)
     const btnRepopulate = document.getElementById("btnRepopulate");
     if (btnRepopulate) {
       btnRepopulate.addEventListener("click", async () => {
-        if (confirm("♻ Do you want to repopulate all fixed-schedule bosses now?")) {
-          await repopulateWeeklyScheduleBosses(true); // Force mode
-          alert("✅ Fixed-schedule bosses have been repopulated successfully!");
+        if (!confirm("♻ Do you want to repopulate all fixed-schedule bosses now?")) return;
+
+        btnRepopulate.disabled = true;
+        const originalText = btnRepopulate.innerHTML;
+        btnRepopulate.innerHTML = "⏳ Repopulating...";
+
+        try {
+          const bossesRef = ref(db, "bosses");
+          const snapshot = await get(bossesRef);
+          const existing = [];
+
+          if (snapshot.exists()) {
+            snapshot.forEach((child) => {
+              const b = child.val();
+              if (b.bossSchedule)
+                existing.push(`${b.bossName}_${b.bossSchedule}`.toUpperCase());
+            });
+          }
+
+          let added = 0;
+          for (const b of fixedScheduleBosses) {
+            const key = `${b.bossName}_${b.bossSchedule}`.toUpperCase();
+            if (!existing.includes(key)) {
+              const next = getNextScheduledSpawn(b.bossSchedule);
+              await push(bossesRef, {
+                bossName: b.bossName,
+                guild: b.guild,
+                bossSchedule: b.bossSchedule,
+                nextSpawn: next ? next.toISOString() : "",
+                bossHour: "",
+                lastKilled: "",
+              });
+              added++;
+            }
+          }
+
+          alert(
+            added > 0
+              ? `✅ ${added} new boss${added > 1 ? "es" : ""} added successfully.`
+              : `✅ All fixed-schedule bosses already exist — no changes made.`
+          );
+
           monitorBosses();
+        } catch (err) {
+          console.error("⚠️ Repopulate error:", err);
+          alert("⚠️ Something went wrong while repopulating!");
+        } finally {
+          btnRepopulate.disabled = false;
+          btnRepopulate.innerHTML = originalText;
         }
       });
     }
+
 
     // ✅ Edit button
     document.querySelectorAll(".edit-btn").forEach((btn) => {

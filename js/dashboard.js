@@ -17,7 +17,7 @@ navDashboard.addEventListener("click", () => {
   navBossList.classList.remove("active");
   dashboardSection.style.display = "block";
   bossListContainer.style.display = "none";
-  fetchAndRenderBosses(); // Refresh when returning
+  fetchAndRenderBosses();
 });
 
 navBossList.addEventListener("click", async () => {
@@ -26,9 +26,7 @@ navBossList.addEventListener("click", async () => {
     if (!entered) return alert("❌ Invalid token");
     try {
       const snap = await get(ref(db, "tokens/" + entered.trim()));
-      if (!snap.exists() || snap.val() !== true) {
-        return alert("❌ Invalid token");
-      }
+      if (!snap.exists() || snap.val() !== true) return alert("❌ Invalid token");
       isAuthorized = true;
       alert("✅ Access granted!");
     } catch (err) {
@@ -53,13 +51,10 @@ navBossList.addEventListener("click", async () => {
 /* ======================
    🔹 HELPER FUNCTIONS
 ====================== */
-
-// Compute next spawn date for weekly schedules (e.g. "Monday 11:30, Thursday 19:00")
 function getNextScheduledSpawn(scheduleStr) {
   if (!scheduleStr) return null;
-
   const now = new Date();
-  const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const daysOfWeek = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
   const schedules = scheduleStr.split(",").map(s => s.trim());
   let soonest = null;
 
@@ -67,52 +62,25 @@ function getNextScheduledSpawn(scheduleStr) {
     const [dayStr, timeStr] = entry.split(" ");
     const dayIndex = daysOfWeek.findIndex(d => d.toLowerCase() === dayStr.toLowerCase());
     if (dayIndex === -1 || !timeStr) continue;
-
     const [hour, minute] = timeStr.split(":").map(Number);
     let candidate = new Date(now);
     candidate.setHours(hour, minute, 0, 0);
-
     const diffDays = (dayIndex - candidate.getDay() + 7) % 7;
     candidate.setDate(candidate.getDate() + diffDays);
-
-    // If this week’s time already passed, push to next week
     if (candidate <= now) candidate.setDate(candidate.getDate() + 7);
-
     if (!soonest || candidate < soonest) soonest = candidate;
   }
-
   return soonest;
 }
-
-// function formatCountdown(targetDate) {
-//   if (!targetDate) return "--:--:--";
-//   const now = new Date();
-//   let diff = (targetDate - now) / 1000; // seconds
-//   if (diff <= 0) return "SPAWNING NOW!";
-//   const hours = Math.floor(diff / 3600);
-//   diff %= 3600;
-//   const minutes = Math.floor(diff / 60);
-//   const seconds = Math.floor(diff % 60);
-//   return `${hours.toString().padStart(2, "0")}:${minutes
-//     .toString()
-//     .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-// }
 
 function formatCountdown(targetDate) {
   const now = new Date();
   const diff = targetDate - now;
-
   if (diff <= 0) return "00 hrs : 00 mns : 00 secs";
-
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-  const h = hours.toString().padStart(2, "0");
-  const m = minutes.toString().padStart(2, "0");
-  const s = seconds.toString().padStart(2, "0");
-
-  return `${h} hrs : ${m} mns : ${s} secs`;
+  return `${hours.toString().padStart(2, "0")} hrs : ${minutes.toString().padStart(2, "0")} mns : ${seconds.toString().padStart(2, "0")} secs`;
 }
 
 /* ======================
@@ -127,204 +95,241 @@ async function fetchAndRenderBosses() {
     }
 
     const bosses = [];
-    snapshot.forEach((childSnap) => {
+    snapshot.forEach(childSnap => {
       const b = childSnap.val();
       b._key = childSnap.key;
-
       let ts = Date.parse(b.nextSpawn);
-      if (isNaN(ts) && typeof b.nextSpawn === "string") {
-        ts = Date.parse(b.nextSpawn.replace(" ", "T"));
-      }
-
-      // If boss uses fixed schedule, calculate next spawn dynamically
+      if (isNaN(ts) && typeof b.nextSpawn === "string") ts = Date.parse(b.nextSpawn.replace(" ", "T"));
       if (b.bossSchedule && !b.bossHour) {
         const nextDate = getNextScheduledSpawn(b.bossSchedule);
         ts = nextDate ? nextDate.getTime() : Infinity;
         b.nextSpawn = nextDate ? nextDate.toISOString() : b.nextSpawn;
       }
-
       b._ts = isNaN(ts) ? Infinity : ts;
       bosses.push(b);
     });
 
-    // Sort by soonest spawn
     bosses.sort((a, b) => a._ts - b._ts);
 
-    // Reset layout
-    dashboardCards.innerHTML = "";
-    dashboardCards.style.display = "grid";
-    // dashboardCards.style.gridTemplateColumns = "repeat(auto-fit, minmax(300px, 1fr))";
-    dashboardCards.style.gridTemplateColumns = "repeat(auto-fill, minmax(300px, 1fr))";
-    dashboardCards.style.maxWidth = "1553px";
-    dashboardCards.style.margin = "0 auto";
-    dashboardCards.style.gap = "1rem";
+    const now = new Date();
+    const today = now.getDate();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
 
-    // Render each boss tile
-    bosses.forEach((b) => {
-      const card = document.createElement("div");
-      card.className =
-        "boss-tile bg-white rounded-2xl shadow p-4 transition-transform duration-200 hover:scale-[1.02]";
-      card.style.display = "flex";
-      card.style.alignItems = "center"; // ✅ align image and text side by side
-      card.style.justifyContent = "flex-start";
-      card.style.height = "120px";
-      card.style.borderLeft = "6px solid #007bff";
-      card.style.color = "black";
-      card.style.gap = "12px";
+    const groups = { soon: [], today: [], tomorrow: [], later: [] };
 
-      // ✅ Define image map
-      const bossImageMap = {
-        VENATUS: "img/venatus.png",
-        VIORENT: "img/viorent.png",
-        EGO: "img/ego.png",
-        LIVERA: "img/livera.png",
-        ARANEO: "img/araneo.png",
-        NEUTRO: "img/neutro.png",
-        SAPHIRUS: "img/saphirus.png",
-        THYMELE: "img/thymele.png",
-        UNDOMIEL: "img/undomiel.png",
-        WANNITAS: "img/wannitas.png",
-        DUPLICAN: "img/duplican.png",
-        METUS: "img/metus.png",
-        AMENTIS: "img/amentis.png",
-        CLEMANTIS: "img/clemantis.png",
-        TITORE: "img/titore.png",
-        GARETH: "img/gareth.png",
-        LADYDALIA: "img/lady_dalia.png",
-        GENAQULUES: "img/gen_aquleus.png",
-        GENERALAQULES: "img/gen_aquleus.png",
-        AURAQ: "img/auraq.png",
-        MILAVY: "img/milavy.png",
-        CHAIFLOCK: "img/chaiflock.png",
-        RODERICK: "img/roderick.png",
-        RINGOR: "img/ringor.png",
-        BENJI: "img/benji.png",
-      };
-
-      const normalizedName = normalizeBossName(b.bossName);
-      const imgSrc = bossImageMap[normalizedName] || "img/default.png";
-
-      // ✅ Boss image
-      const img = document.createElement("img");
-      img.src = imgSrc;
-      img.alt = b.bossName;
-      img.style.width = "80px";
-      // img.style.height = "60px";
-      // img.style.borderRadius = "8px";
-      img.style.objectFit = "cover";
-      img.style.flexShrink = "0";
-      card.appendChild(img);
-
-      // ✅ Info container (for text)
-      const info = document.createElement("div");
-      info.style.display = "flex";
-      info.style.flexDirection = "column";
-      info.style.justifyContent = "center";
-      info.style.flex = "1";
-
-      const guild = b.guild || "FFA";
-      const guildTag = document.createElement("span");
-      guildTag.textContent = guild;
-      guildTag.className = `guild-badge ${guild}`;
-      info.appendChild(guildTag);
-
-      const title = document.createElement("h3");
-      title.textContent = b.bossName || "Unknown";
-      title.style.fontWeight = "700";
-      title.style.fontSize = "18px";
-      title.style.margin = "0";
-      info.appendChild(title);
-
-      const nextDate = b._ts !== Infinity ? new Date(b._ts) : null;
-      const spawnDisplay = nextDate
-        ? nextDate.toLocaleString([], { dateStyle: "short", timeStyle: "short" })
-        : "--";
-
-      // Countdown + Label container
-      const countdownWrapper = document.createElement("div");
-      countdownWrapper.style.display = "flex";
-      countdownWrapper.style.alignItems = "center";
-      countdownWrapper.style.gap = "6px";
-      countdownWrapper.style.fontWeight = "bold";
-      countdownWrapper.style.fontSize = ".7em";
-
-      const countdownLabel = document.createElement("span");
-      countdownLabel.className = "countdown-label";
-      countdownLabel.style.color = "#0f0f0fff"; // default blue
-
-      const countdown = document.createElement("span");
-      countdown.className = "countdown";
-      countdown.style.fontWeight = "700";
-
-      countdownWrapper.appendChild(countdownLabel);
-      countdownWrapper.appendChild(countdown);
-      info.appendChild(countdownWrapper);
-
-      const spawnInfo = document.createElement("p");
-      spawnInfo.innerHTML = `<span style="color:#666; font-weight:bold"">Spawn:</span> <strong>${spawnDisplay}</strong>`;
-      spawnInfo.style.fontSize = "1em";
-      spawnInfo.style.margin = "0";
-      info.appendChild(spawnInfo);
-
-      card.appendChild(info);
-      dashboardCards.appendChild(card);
-
-
-      // ⏱ Real-time countdown updater
-      setInterval(() => {
-        if (!nextDate) {
-          countdownLabel.textContent = "";
-          countdown.textContent = "--:--:--";
-          card.style.borderLeftColor = "#888";
-          return;
-        }
-
-        const now = new Date();
-        const diff = nextDate - now;
-
-        if (diff <= 0 && diff > -5 * 60000) {
-          // countdownLabel.textContent = "Active⚔️";
-          // countdownLabel.style.color = "red";
-          countdown.textContent = "SPAWNING NOW!";
-          countdown.style.color = "red";
-          card.style.borderLeftColor = "red";
-        } else if (diff > 0 && diff <= 10 * 60000) {
-          // countdownLabel.textContent = "Spawning Soon🔥";
-          // countdownLabel.style.color = "#ff9900";
-          countdown.textContent = formatCountdown(nextDate);
-          countdown.style.color = "#ff9900";
-          card.style.borderLeftColor = "#ff9900";
-        } else if (diff > 0) {
-          // countdownLabel.textContent = "Upcoming⏳";
-          // countdownLabel.style.color = "#666";
-          countdown.textContent = formatCountdown(nextDate);
-          countdown.style.color = "#007bff";
-          card.style.borderLeftColor = "#007bff";
-        } else {
-          // countdownLabel.textContent = "Missed❌";
-          // countdownLabel.style.color = "#777";
-          countdown.textContent = "Spawn Passed";
-          countdown.style.color = "#777";
-          card.style.borderLeftColor = "#777";
-        }
-      }, 1000);
+    bosses.forEach(b => {
+      const nextDate = new Date(b._ts);
+      const diff = nextDate - now;
+      if (diff <= 10 * 60000 && diff > 0) groups.soon.push(b);
+      else if (nextDate.getDate() === today) groups.today.push(b);
+      else if (nextDate.getDate() === tomorrow.getDate()) groups.tomorrow.push(b);
+      else groups.later.push(b);
     });
+
+    dashboardCards.innerHTML = "";
+
+    const sections = [
+      { label: "🕑 Spawning Soon", color: "#66ff00ff", data: groups.soon },
+      { label: "🌞 Today", color: "#007bff", data: groups.today },
+      { label: "🌙 Tomorrow", color: "#6f42c1", data: groups.tomorrow },
+      { label: "🌅 Later", color: "#e98e07ff", data: groups.later },
+    ];
+
+    sections.forEach(section => {
+      if (section.data.length === 0) return;
+
+      const sectionContainer = document.createElement("div");
+      sectionContainer.style.marginBottom = "2rem";
+
+      const header = document.createElement("h2");
+      header.textContent = section.label;
+      header.style.color = section.color;
+      header.style.fontWeight = "800";
+      header.style.fontSize = "1.3rem";
+      header.style.margin = "10px 0";
+      header.style.display = "flex";
+      header.style.alignItems = "center";
+      header.style.justifyContent = "space-between";
+      header.style.cursor = "pointer";
+      header.style.padding = "8px 12px";
+      header.style.borderBottom = `2px solid ${section.color}`;
+      header.style.background = "rgba(0,0,0,0.05)";
+      header.style.borderRadius = "6px";
+
+      const toggle = document.createElement("span");
+      toggle.textContent = "▼";
+      toggle.style.transition = "transform 0.2s ease";
+      header.appendChild(toggle);
+
+      const grid = document.createElement("div");
+      grid.className = "boss-grid";
+      grid.style.display = "grid";
+      grid.style.gridTemplateColumns = "repeat(auto-fit, minmax(280px, 1fr))";
+      grid.style.gap = "1.2rem";
+      grid.style.margin = "10px auto";
+      grid.style.padding = "0 10px";
+
+      section.data.forEach(b => grid.appendChild(createBossCard(b)));
+
+      header.addEventListener("click", () => {
+        if (grid.classList.contains("animating")) return; // prevent spam clicks
+        grid.classList.add("animating");
+
+        const isCollapsed = grid.classList.contains("collapsed");
+
+        if (isCollapsed) {
+          // --- EXPAND ---
+          grid.classList.remove("collapsed");
+          grid.style.display = "grid";
+          const fullHeight = grid.scrollHeight + "px";
+          grid.style.maxHeight = "0px";
+          grid.offsetHeight; // force reflow
+          grid.style.maxHeight = fullHeight;
+          grid.style.opacity = "1";
+          toggle.style.transform = "rotate(0deg)";
+
+          setTimeout(() => {
+            grid.style.maxHeight = "none";
+            grid.classList.remove("animating");
+          }, 400);
+        } else {
+          // --- COLLAPSE ---
+          const fullHeight = grid.scrollHeight + "px";
+          grid.style.maxHeight = fullHeight; // start from current height
+          grid.offsetHeight; // force reflow
+          grid.style.maxHeight = "0px";
+          grid.style.opacity = "0";
+          toggle.style.transform = "rotate(-90deg)";
+
+          setTimeout(() => {
+            grid.classList.add("collapsed");
+            grid.classList.remove("animating");
+            grid.style.display = "none";
+          }, 400);
+        }
+      });
+
+
+      sectionContainer.appendChild(header);
+      sectionContainer.appendChild(grid);
+      dashboardCards.appendChild(sectionContainer);
+    });
+
   } catch (err) {
     console.error("Error loading bosses:", err);
     dashboardCards.innerHTML = "<p>Error loading bosses</p>";
   }
 
-  function normalizeBossName(name) {
-    return name
-      .toUpperCase()               // make it uppercase
-      .replace(/[^A-Z0-9]/g, "");  // remove all non-alphanumeric chars
+  function createBossCard(b) {
+    const card = document.createElement("div");
+    card.className = "boss-tile";
+    card.style.display = "flex";
+    card.style.flexDirection = "row";
+    card.style.alignItems = "center";
+    card.style.background = "#313030ff";
+    card.style.borderRadius = "12px";
+    card.style.overflow = "hidden";
+    card.style.boxShadow = "0 4px 10px rgba(0,0,0,0.1)";
+    card.style.height = "140px";
+    card.style.transition = "transform 0.2s ease";
+    card.style.borderLeft = "6px solid #007bff";
+
+    card.addEventListener("mouseenter", () => card.style.transform = "scale(1.03)");
+    card.addEventListener("mouseleave", () => card.style.transform = "scale(1)");
+
+    const bossImageMap = {
+      VENATUS: "img/venatus.png", VIORENT: "img/viorent.png", EGO: "img/ego.png",
+      LIVERA: "img/livera.png", ARANEO: "img/araneo.png", NEUTRO: "img/neutro.png",
+      SAPHIRUS: "img/saphirus.png", THYMELE: "img/thymele.png", UNDOMIEL: "img/undomiel.png",
+      WANNITAS: "img/wannitas.png", DUPLICAN: "img/duplican.png", METUS: "img/metus.png",
+      AMENTIS: "img/amentis.png", CLEMANTIS: "img/clemantis.png", TITORE: "img/titore.png",
+      GARETH: "img/gareth.png", LADYDALIA: "img/lady_dalia.png", GENAQULUES: "img/gen_aquleus.png",
+      GENERALAQULES: "img/gen_aquleus.png", AURAQ: "img/auraq.png", MILAVY: "img/milavy.png",
+      CHAIFLOCK: "img/chaiflock.png", RODERICK: "img/roderick.png", RINGOR: "img/ringor.png",
+      BENJI: "img/benji.png",
+    };
+
+    const normalizedName = b.bossName?.toUpperCase().replace(/[^A-Z0-9]/g, "") || "";
+    const imgSrc = bossImageMap[normalizedName] || "img/default.png";
+
+    const img = document.createElement("img");
+    img.src = imgSrc;
+    img.alt = b.bossName;
+    img.style.width = "100px";
+    img.style.height = "100%";
+    img.style.objectFit = "cover";
+    img.style.borderRight = "4px solid rgba(0,0,0,0.05)";
+    card.appendChild(img);
+
+    const info = document.createElement("div");
+    info.style.flex = "1";
+    info.style.padding = "10px 14px";
+    info.style.display = "flex";
+    info.style.flexDirection = "column";
+    info.style.justifyContent = "center";
+
+    const guild = b.guild || "FFA";
+    const guildTag = document.createElement("span");
+    guildTag.textContent = guild;
+    guildTag.className = `guild-badge ${guild}`;
+    guildTag.style.display = "inline-block";
+    guildTag.style.padding = "2px 8px";
+    guildTag.style.borderRadius = "6px";
+    guildTag.style.fontSize = "0.75em";
+    guildTag.style.fontWeight = "600";
+    guildTag.style.marginBottom = "4px";
+    info.appendChild(guildTag);
+
+    const title = document.createElement("h3");
+    title.textContent = b.bossName || "Unknown";
+    title.style.fontWeight = "700";
+    title.style.fontSize = "17px";
+    info.appendChild(title);
+
+    const nextDate = b._ts !== Infinity ? new Date(b._ts) : null;
+    const spawnDisplay = nextDate
+      ? nextDate.toLocaleString([], { dateStyle: "short", timeStyle: "short" })
+      : "--";
+
+    const countdown = document.createElement("span");
+    countdown.className = "countdown";
+    countdown.style.fontWeight = "700";
+    countdown.style.fontSize = ".85em";
+    info.appendChild(countdown);
+
+    const spawnInfo = document.createElement("p");
+    spawnInfo.innerHTML = `<span style="color:#666; font-weight:bold">Spawn:</span> <strong>${spawnDisplay}</strong>`;
+    spawnInfo.style.fontSize = "0.9em";
+    info.appendChild(spawnInfo);
+
+    card.appendChild(info);
+
+    if (nextDate) {
+      setInterval(() => {
+        const diff = nextDate - new Date();
+        if (diff <= 0 && diff > -5 * 60000) {
+          countdown.textContent = "SPAWNING NOW!";
+          countdown.style.color = "red";
+          card.style.borderLeftColor = "red";
+        } else if (diff > 0 && diff <= 10 * 60000) {
+          countdown.textContent = formatCountdown(nextDate);
+          countdown.style.color = "#ff9900";
+          card.style.borderLeftColor = "#ff9900";
+        } else if (diff > 0) {
+          countdown.textContent = formatCountdown(nextDate);
+          countdown.style.color = "#007bff";
+          card.style.borderLeftColor = "#007bff";
+        } else {
+          countdown.textContent = "Spawn Passed";
+          countdown.style.color = "#777";
+          card.style.borderLeftColor = "#777";
+        }
+      }, 1000);
+    }
+    return card;
   }
 }
 
-/* ======================
-   🔹 STARTUP HOOKS
-====================== */
 window.addEventListener("load", fetchAndRenderBosses);
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) fetchAndRenderBosses();
-});
+document.addEventListener("visibilitychange", () => { if (!document.hidden) fetchAndRenderBosses(); });

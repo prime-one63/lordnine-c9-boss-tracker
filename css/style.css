@@ -48,12 +48,13 @@ p.countdown {
 }
 
 /* === Boss Spawn Status Colors === */
-/* .boss-card {
+.boss-card {
   transition: background-color 0.5s ease, transform 0.2s ease;
   padding: 10px;
   border-radius: 10px;
   margin: 10px;
-} */
+}
+ 
 
 .boss-default {
   background-color: #2b2b2b;
@@ -109,6 +110,111 @@ p.countdown {
 .guild-badge.FFA { background-color: #808080; }
 .guild-badge.Faction { background-color: #8f5186; }
 
+.boss-section-label {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  border-bottom: 2px solid rgba(255,255,255,0.1);
+}
 
 
 
+/* ===== Dashboard Layout ===== */
+.boss-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin: 10px auto;
+  padding: 0 10px;
+  overflow: hidden;
+  max-height: none;
+  opacity: 1;
+  transition: max-height 0.4s ease, opacity 0.4s ease;
+}
+
+.boss-grid.collapsed {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.boss-grid.expanding {
+  overflow: hidden;
+}
+
+.boss-grid.collapsing {
+  overflow: hidden;
+}
+
+
+/* ===== Boss Cards ===== */
+.boss-tile {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  height: 140px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  border-left: 6px solid #007bff;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.boss-tile:hover {
+  transform: scale(1.03);
+}
+
+/* ===== Image ===== */
+.boss-tile img {
+  width: 100px;
+  height: 100%;
+  object-fit: cover;
+  border-right: 4px solid rgba(0, 0, 0, 0.05);
+}
+
+/* ===== Info Section ===== */
+.boss-tile h3 {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 2px 0;
+}
+.boss-tile .countdown {
+  font-size: 0.85em;
+  font-weight: 700;
+}
+.boss-tile p {
+  margin: 4px 0 0;
+  font-size: 0.9em;
+}
+
+/* ===== Guild Badge Colors ===== */
+.guild-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75em;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+
+/* ===== Section Header ===== */
+h2.section-header {
+  font-weight: 800;
+  font-size: 1.3rem;
+  margin: 10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.05);
+  user-select: none;
+}
+
+h2.section-header span {
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
