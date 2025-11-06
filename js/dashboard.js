@@ -121,19 +121,26 @@ async function fetchAndRenderBosses() {
     bosses.forEach(b => {
       const nextDate = new Date(b._ts);
       const diff = nextDate - now;
-      if (diff <= 10 * 60000 && diff > 0) groups.soon.push(b);
-      else if (nextDate.getDate() === today) groups.today.push(b);
-      else if (nextDate.getDate() === tomorrow.getDate()) groups.tomorrow.push(b);
-      else groups.later.push(b);
+
+      // ✅ Stay in "Spawning Soon" if within 10 min before OR 5 min after spawn
+      if (diff <= 10 * 60000 && diff > -5 * 60000) {
+        groups.soon.push(b);
+      } else if (nextDate.getDate() === today) {
+        groups.today.push(b);
+      } else if (nextDate.getDate() === tomorrow.getDate()) {
+        groups.tomorrow.push(b);
+      } else {
+        groups.later.push(b);
+      }
     });
 
     dashboardCards.innerHTML = "";
 
     const sections = [
-      { label: "🕑 Spawning Soon", color: "#66ff00ff", data: groups.soon },
+      { label: "🕑 Spawning", color: "#66ff00ff", data: groups.soon },
       { label: "🌞 Today", color: "#007bff", data: groups.today },
       { label: "🌙 Tomorrow", color: "#6f42c1", data: groups.tomorrow },
-      { label: "🌅 Later", color: "#e98e07ff", data: groups.later },
+      { label: "🌅 Coming Soon", color: "#e98e07ff", data: groups.later },
     ];
 
     sections.forEach(section => {
@@ -165,12 +172,15 @@ async function fetchAndRenderBosses() {
       const grid = document.createElement("div");
       grid.className = "boss-grid";
       grid.style.display = "grid";
-      grid.style.gridTemplateColumns = "repeat(auto-fit, minmax(280px, 1fr))";
+      grid.style.gridTemplateColumns = "repeat(4, 1fr)";
       grid.style.gap = "1.2rem";
       grid.style.margin = "10px auto";
       grid.style.padding = "0 10px";
+      grid.style.overflow = "hidden";
+      grid.style.transition = "max-height 0.4s ease, opacity 0.4s ease";
+      grid.dataset.sectionColor = section.color; // 🔹 store the section color for later use
 
-      section.data.forEach(b => grid.appendChild(createBossCard(b)));
+      section.data.forEach(b => grid.appendChild(createBossCard(b, section.color)));
 
       header.addEventListener("click", () => {
         if (grid.classList.contains("animating")) return; // prevent spam clicks
@@ -221,7 +231,7 @@ async function fetchAndRenderBosses() {
     dashboardCards.innerHTML = "<p>Error loading bosses</p>";
   }
 
-  function createBossCard(b) {
+  function createBossCard(b, sectionColor = "#007bff") {
     const card = document.createElement("div");
     card.className = "boss-tile";
     card.style.display = "flex";
@@ -233,7 +243,7 @@ async function fetchAndRenderBosses() {
     card.style.boxShadow = "0 4px 10px rgba(0,0,0,0.1)";
     card.style.height = "140px";
     card.style.transition = "transform 0.2s ease";
-    card.style.borderLeft = "6px solid #007bff";
+    card.style.borderLeft = `6px solid ${sectionColor}`;
 
     card.addEventListener("mouseenter", () => card.style.transform = "scale(1.03)");
     card.addEventListener("mouseleave", () => card.style.transform = "scale(1)");
@@ -300,12 +310,13 @@ async function fetchAndRenderBosses() {
 
     const spawnInfo = document.createElement("p");
     spawnInfo.innerHTML = `<span style="color:#666; font-weight:bold">Spawn:</span> <strong>${spawnDisplay}</strong>`;
-    spawnInfo.style.fontSize = "0.9em";
+    spawnInfo.style.fontSize = "1.1em";
     info.appendChild(spawnInfo);
 
     card.appendChild(info);
 
     if (nextDate) {
+      const originalColor = sectionColor;
       setInterval(() => {
         const diff = nextDate - new Date();
         if (diff <= 0 && diff > -5 * 60000) {
@@ -317,10 +328,11 @@ async function fetchAndRenderBosses() {
           countdown.style.color = "#ff9900";
           card.style.borderLeftColor = "#ff9900";
         } else if (diff > 0) {
+          // 🟦 Normal upcoming spawn
           countdown.textContent = formatCountdown(nextDate);
-          countdown.style.color = "#007bff";
-          card.style.borderLeftColor = "#007bff";
-        } else {
+          countdown.style.color = originalColor; // ✅ match section color
+          card.style.borderLeftColor = originalColor; // ✅ restore section color
+        }else {
           countdown.textContent = "Spawn Passed";
           countdown.style.color = "#777";
           card.style.borderLeftColor = "#777";
