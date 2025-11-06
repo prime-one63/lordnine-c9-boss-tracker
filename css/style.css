@@ -1,75 +1,96 @@
-body { 
+/* ===================================
+   🌌 GLOBAL STYLES
+=================================== */
+body {
   background-color: #212529;
   color: #fff;
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  padding-top: 70px; 
 }
-.sidebar {
-  height: 100vh;
-  background-color: #212529;
-  color: #fff;
+
+/* ===================================
+   🧭 Top Navigation Bar
+=================================== */
+.topnav {
   position: fixed;
-  width: 250px;
   top: 0;
   left: 0;
-  padding-top: 20px;
+  width: 100%;
+  height: 60px;
+  background-color: #212529;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  z-index: 1000;
 }
-.sidebar h4 { text-align: center; margin-bottom: 30px; font-weight: 600; }
-.sidebar a {
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  gap: 1rem;
+  margin: 0;
+}
+
+.nav-links li a {
   color: #adb5bd;
-  display: block;
-  padding: 10px 20px;
   text-decoration: none;
+  font-weight: 500;
+  padding: 8px 14px;
   border-radius: 6px;
   transition: background 0.2s, color 0.2s;
 }
-.sidebar a:hover, .sidebar a.active { background-color: #495057; color: #fff; }
-.content { margin-left: 250px; padding: 30px; }
-.boss-card {
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  background: #3f464e;
-  padding: 20px;
-  margin-bottom: 15px;
-}
-.countdown { font-size: 18px; font-weight: 600; color: #0d6efd; }
-p.countdown {
-  margin-bottom: 0 !important;
+
+.nav-links li a:hover,
+.nav-links li a.active {
+  background-color: #495057;
+  color: #fff;
 }
 
-.modal-header {
-  color: #000;
-}
-
-.modal-body {
-  color: #000;
+/* ===================================
+   📄 CONTENT
+=================================== */
+.content {
+  margin-left: 250px;
+  padding: 30px;
 }
 
 .text-uppercase {
   text-transform: uppercase;
 }
 
-/* === Boss Spawn Status Colors === */
+/* ===================================
+   🧱 BOSS CARD BASE
+=================================== */
 .boss-card {
+  border-radius: 12px;
+  background: #3f464e;
+  padding: 20px;
+  margin-bottom: 15px;
   transition: background-color 0.5s ease, transform 0.2s ease;
-  padding: 10px;
-  border-radius: 10px;
-  margin: 10px;
-}
- 
-
-.boss-default {
-  background-color: #2b2b2b;
-  color: white;
-}
-
-.boss-soon {
-  background-color: #ffcc00;
-  color: #000;
-}
-
-.boss-spawning {
-  background-color: #ff3b3b;
-  color: white;
-  transform: scale(1.02);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
 .boss-card .badge {
@@ -77,31 +98,30 @@ p.countdown {
   font-size: 0.9em;
 }
 
-/* Small circular guild indicator */
+.countdown {
+  font-size: 18px;
+  font-weight: 600;
+  color: #0d6efd;
+  margin-bottom: 0 !important;
+}
+
+/* ===================================
+   ⚡ STATUS COLORS
+=================================== */
+.boss-default { background-color: #2b2b2b; color: white; }
+.boss-soon { background-color: #ffcc00; color: #000; }
+.boss-spawning { background-color: #ff3b3b; color: white; transform: scale(1.02); }
+
+/* ===================================
+   🛡️ GUILD BADGE COLORS
+=================================== */
 .guild-badge {
-  display: inline-block;
-  padding: 2px 6px;
-  width: max-content;
-  border-radius: 10px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: #fff;
-  background-color: #808080;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-#btnRepopulate {
-  background-color: #28a745;
-  border: none;
   color: white;
-  font-weight: 500;
-}
-#btnRepopulate:hover {
-  background-color: #218838;
+  background-color: #007bff;
+  padding: 2px 6px;
+  border-radius: 5px;
 }
 
-/* Color variants */
 .guild-badge.Cloud9 { background-color: #00bfff; }
 .guild-badge.Midnight { background-color: #15388577; }
 .guild-badge.HellSing { background-color: #ff3b3b; }
@@ -110,6 +130,9 @@ p.countdown {
 .guild-badge.FFA { background-color: #808080; }
 .guild-badge.Faction { background-color: #8f5186; }
 
+/* ===================================
+   🗂️ SECTION LABELS
+=================================== */
 .boss-section-label {
   font-size: 1.2rem;
   font-weight: 700;
@@ -117,37 +140,35 @@ p.countdown {
   border-bottom: 2px solid rgba(255,255,255,0.1);
 }
 
-
-
-/* ===== Dashboard Layout ===== */
+/* ===================================
+   🧩 GRID LAYOUT (with animation)
+=================================== */
 .boss-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1rem;
   margin: 10px auto;
   padding: 0 10px;
   overflow: hidden;
-  max-height: none;
   opacity: 1;
-  transition: max-height 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.4s ease;
+  transition: 
+    max-height 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    opacity 0.4s ease;
 }
 
 .boss-grid.collapsed {
   max-height: 0;
   opacity: 0;
-  overflow: hidden;
 }
 
-.boss-grid.expanding {
-  overflow: hidden;
-}
-
+.boss-grid.expanding,
 .boss-grid.collapsing {
   overflow: hidden;
 }
 
-
-/* ===== Boss Cards ===== */
+/* ===================================
+   🧱 BOSS TILE DESIGN
+=================================== */
 .boss-tile {
   background: #fff;
   border-radius: 12px;
@@ -155,51 +176,47 @@ p.countdown {
   display: flex;
   align-items: center;
   height: 140px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  border-left: 6px solid #007bff;
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  border-left: 6px solid var(--tile-border, #007bff);
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
+
 .boss-tile:hover {
   transform: scale(1.03);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
 }
 
-/* ===== Image ===== */
+/* Boss Image */
+/* Responsive Enhancements */
 .boss-tile img {
-  width: 100px;
-  height: 100%;
+  width: 100%;
+  height: auto;
   object-fit: cover;
-  border-right: 4px solid rgba(0, 0, 0, 0.05);
 }
 
-/* ===== Info Section ===== */
+/* Info Section */
 .boss-tile h3 {
   font-size: 17px;
   font-weight: 700;
   margin: 2px 0;
+  color: #f0f0f0;
 }
+
 .boss-tile .countdown {
   font-size: 0.85em;
   font-weight: 700;
+  color: #007bff;
 }
+
 .boss-tile p {
   margin: 4px 0 0;
   font-size: 0.9em;
+  color: #ffffff;
 }
 
-/* ===== Guild Badge Colors ===== */
-.guild-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 0.75em;
-  font-weight: 600;
-  color: white;
-  margin-bottom: 4px;
-  text-transform: uppercase;
-}
-
-
-/* ===== Section Header ===== */
+/* ===================================
+   🪄 SECTION HEADER COLLAPSE ANIMATION
+=================================== */
 h2.section-header {
   font-weight: 800;
   font-size: 1.3rem;
@@ -210,11 +227,181 @@ h2.section-header {
   cursor: pointer;
   padding: 8px 12px;
   border-radius: 6px;
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.1);
   user-select: none;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+h2.section-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: scale(1.02);
 }
 
 h2.section-header span {
-  display: inline-block;
-  transition: transform 0.3s ease;
+  transition: transform 0.4s ease;
+}
+
+h2.section-header.collapsed span {
+  transform: rotate(-90deg);
+}
+
+/* ===================================
+   📱 RESPONSIVE DESIGN
+=================================== */
+
+/* Mobile */
+@media (max-width: 600px) {
+  .boss-tile {
+    flex-direction: column;
+    height: auto;
+  }
+}
+
+/* Tablet */
+@media (min-width: 600px) and (max-width: 899px) {
+  .boss-grid { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  .boss-tile img { width: 120px; }
+  .boss-tile h3 { font-size: 16px; }
+}
+
+/* Small Desktop */
+@media (min-width: 900px) and (max-width: 1399px) {
+  .boss-grid { grid-template-columns: repeat(3, 1fr); }
+  .boss-tile img { width: 100px; }
+}
+
+/* Large Screen */
+@media (min-width: 1400px) {
+  .boss-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+
+/* 📱 MOBILE VIEW: Single column stacked card */
+@media (max-width: 599px) {
+  .content {
+    margin-left: 0;
+    padding: 15px;
+  }
+
+  .boss-grid {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+
+  .boss-tile {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    height: auto;
+    padding: 0;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .boss-tile img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border: none;
+    border-bottom: 4px solid rgba(0,0,0,0.15);
+  }
+
+  .boss-tile .info {
+    padding: 12px 14px;
+    width: 100%;
+  }
+
+  .boss-tile h3 {
+    font-size: 1rem;
+    margin: 4px 0;
+    color: #000;
+  }
+
+  .boss-tile p,
+  .boss-tile .countdown {
+    font-size: 0.85rem;
+    margin: 2px 0;
+  }
+
+  .guild-badge {
+    font-size: 0.7em;
+    margin-top: 4px;
+  }
+}
+
+/* 💻 TABLET VIEW: Two cards per row, compact style */
+@media (min-width: 600px) and (max-width: 1199px) {
+  .boss-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .boss-tile {
+    flex-direction: row;
+    height: 120px;
+  }
+
+  .boss-tile img {
+    width: 100px;
+  }
+
+  .boss-tile h3 {
+    font-size: 0.95rem;
+  }
+
+  .boss-tile p,
+  .boss-tile .countdown {
+    font-size: 0.8rem;
+  }
+}
+
+/* 🖥️ DESKTOP VIEW: Four cards per row (default) */
+@media (min-width: 1200px) {
+  .boss-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+
+/* === Main Content Wrapper === */
+/* main {
+  margin: 0 auto;               
+  padding: 1rem 2rem;           
+  display: flex;
+  flex-direction: column;
+  align-items: center;           
+} */
+
+/* === Section Layout === */
+/* #dashboardSection,
+#bossListContainer {
+  width: 100%;
+  max-width: 1300px;           
+} */
+
+main {
+  margin: 0 auto;
+  padding: 1rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* change from center -> stretch */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ensure content cards take full width of container */
+#dashboardSection,
+#bossListContainer,
+.card {
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 1500px;
+}
+
+.table th, .table td {
+  vertical-align: middle;
+}
+
+.card .card-body, .card p, .card h3 {
+  text-align: left;
 }
