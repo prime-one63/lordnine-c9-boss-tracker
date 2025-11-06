@@ -1,420 +1,367 @@
 import { db } from "./firebase.js";
 import { ref, push, set, update, remove, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-export function initBossList() {
-  window.onerror = (msg, src, line, col, err) => {
-    console.error("⚠️ JS Error:", msg, "at", line, ":", col, err);
-  };
+const navDashboard = document.getElementById("navDashboard");
+const navBossList = document.getElementById("navBossList");
+const dashboardSection = document.getElementById("dashboardSection");
+const bossListContainer = document.getElementById("bossListContainer");
+const dashboardCards = document.getElementById("dashboardCards");
 
-  const bossForm = document.getElementById("bossForm");
-  const bossTable = document.querySelector("#bossTable tbody");
-  const bossModal = new bootstrap.Modal(document.getElementById("bossModal"));
+let isAuthorized = false;
 
-  const bossName = document.getElementById("bossName");
-  const bossHour = document.getElementById("bossHour");
-  const lastKilled = document.getElementById("lastKilled");
-  const lastKilledField = document.getElementById("lastKilledField");
-  const nextSpawn = document.getElementById("nextSpawn");
-  const editKey = document.getElementById("editKey");
-  const hourGroup = document.getElementById("hourGroup");
-  const scheduleGroup = document.getElementById("scheduleGroup");
-  const bossSchedule = document.getElementById("bossSchedule");
-  const spawnHourType = document.getElementById("spawnHourType");
-  const spawnScheduleType = document.getElementById("spawnScheduleType");
+/* ======================
+   🔹 NAVIGATION
+====================== */
+navDashboard.addEventListener("click", () => {
+  navDashboard.classList.add("active");
+  navBossList.classList.remove("active");
+  dashboardSection.style.display = "block";
+  bossListContainer.style.display = "none";
+  fetchAndRenderBosses();
+});
 
-  // ✅ Fixed schedule bosses list
-  const fixedScheduleBosses = [
-    { bossName: "CLEMANTIS", guild: "Faction", bossSchedule: "Monday 11:30" },
-    { bossName: "CLEMANTIS", guild: "Faction", bossSchedule: "Thursday 19:00" },
-    { bossName: "SAPHIRUS", guild: "Faction", bossSchedule: "Sunday 17:00" },
-    { bossName: "SAPHIRUS", guild: "Faction", bossSchedule: "Tuesday 11:30" },
-    { bossName: "NEUTRO", guild: "Faction", bossSchedule: "Tuesday 19:00" },
-    { bossName: "NEUTRO", guild: "Faction", bossSchedule: "Thursday 11:30" },
-    { bossName: "THYMELE", guild: "Faction", bossSchedule: "Monday 19:00" },
-    { bossName: "THYMELE", guild: "Faction", bossSchedule: "Wednesday 11:30" },
-    { bossName: "MILAVY", guild: "Faction", bossSchedule: "Saturday 15:00" },
-    { bossName: "RINGOR", guild: "Faction", bossSchedule: "Saturday 17:00" },
-    { bossName: "RODERICK", guild: "Faction", bossSchedule: "Friday 19:00" },
-    { bossName: "AURAQ", guild: "Faction", bossSchedule: "Friday 22:00" },
-    { bossName: "AURAQ", guild: "Faction", bossSchedule: "Wednesday 21:00" },
-    { bossName: "CHAIFLOCK", guild: "Faction", bossSchedule: "Saturday 22:00" },
-    { bossName: "BENJI", guild: "Faction", bossSchedule: "Sunday 21:00" },
-  ];
-
-  // ✅ Convert timestamps for form fields
-  function toDatetimeLocalInput(stored) {
-    if (!stored) return "";
-    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(stored)) return stored;
-    const d = new Date(stored);
-    if (isNaN(d)) return "";
-    const pad = (n) => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
-
-  // ✅ Calculate next spawn time
-  function calcNextSpawn() {
-    const isHourBased = spawnHourType.checked;
-    const isScheduleBased = spawnScheduleType.checked;
-    const lastKilledVal = lastKilled.value;
-
-    if (isHourBased) {
-      const hours = parseFloat(bossHour.value);
-      if (hours && lastKilledVal) {
-        const d = new Date(lastKilledVal);
-        d.setHours(d.getHours() + hours);
-        const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-          .toISOString()
-          .slice(0, 16);
-        nextSpawn.value = local;
-      }
-    } else if (isScheduleBased) {
-      const schedule = bossSchedule.value;
-      if (!schedule) return;
-      const next = getNextScheduledSpawn(schedule);
-      if (next) {
-        const local = new Date(next.getTime() - next.getTimezoneOffset() * 60000)
-          .toISOString()
-          .slice(0, 16);
-        nextSpawn.value = local;
-      }
+navBossList.addEventListener("click", async () => {
+  if (!isAuthorized) {
+    const entered = prompt("Enter admin access token:");
+    if (!entered) return alert("❌ Invalid token");
+    try {
+      const snap = await get(ref(db, "tokens/" + entered.trim()));
+      if (!snap.exists() || snap.val() !== true) return alert("❌ Invalid token");
+      isAuthorized = true;
+      alert("✅ Access granted!");
+    } catch (err) {
+      console.error(err);
+      return alert("❌ Token check failed");
     }
   }
 
-  bossHour.addEventListener("input", calcNextSpawn);
-  bossSchedule.addEventListener("change", calcNextSpawn);
-  lastKilled.addEventListener("input", calcNextSpawn);
-  spawnHourType.addEventListener("change", calcNextSpawn);
-  spawnScheduleType.addEventListener("change", calcNextSpawn);
+  navBossList.classList.add("active");
+  navDashboard.classList.remove("active");
+  dashboardSection.style.display = "none";
+  bossListContainer.style.display = "block";
 
-  // ✅ Get next weekly schedule
-  function getNextScheduledSpawn(scheduleStr) {
-    if (!scheduleStr) return null;
-    const now = new Date();
-    const [dayStr, timeStr] = scheduleStr.split(" ");
-    const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  if (!document.getElementById("bossListSection")) {
+    const html = await (await fetch("bosslist.html")).text();
+    bossListContainer.innerHTML = html;
+    const { initBossList } = await import("./bosslist.js");
+    initBossList();
+  }
+});
+
+/* ======================
+   🔹 HELPER FUNCTIONS
+====================== */
+function getNextScheduledSpawn(scheduleStr) {
+  if (!scheduleStr) return null;
+  const now = new Date();
+  const daysOfWeek = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const schedules = scheduleStr.split(",").map(s => s.trim());
+  let soonest = null;
+
+  for (const entry of schedules) {
+    const [dayStr, timeStr] = entry.split(" ");
     const dayIndex = daysOfWeek.findIndex(d => d.toLowerCase() === dayStr.toLowerCase());
-    if (dayIndex === -1 || !timeStr) return null;
+    if (dayIndex === -1 || !timeStr) continue;
     const [hour, minute] = timeStr.split(":").map(Number);
-
     let candidate = new Date(now);
     candidate.setHours(hour, minute, 0, 0);
-    let diff = dayIndex - candidate.getDay();
-    if (diff < 0 || (diff === 0 && candidate <= now)) diff += 7;
-    candidate.setDate(candidate.getDate() + diff);
-    return candidate;
+    const diffDays = (dayIndex - candidate.getDay() + 7) % 7;
+    candidate.setDate(candidate.getDate() + diffDays);
+    if (candidate <= now) candidate.setDate(candidate.getDate() + 7);
+    if (!soonest || candidate < soonest) soonest = candidate;
   }
+  return soonest;
+}
 
-  // ✅ Boss processing tracker
-  const processedBosses = new Map();
+function formatCountdown(targetDate) {
+  const now = new Date();
+  const diff = targetDate - now;
+  if (diff <= 0) return "00 hrs : 00 mns : 00 secs";
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+  return `${hours.toString().padStart(2, "0")} hrs : ${minutes.toString().padStart(2, "0")} mns : ${seconds.toString().padStart(2, "0")} secs`;
+}
 
-  // ✅ Auto-reset or delete logic
-  async function autoResetOrDeleteBoss(entry, key) {
-    if (!entry.nextSpawn) return;
-    const nextSpawn = new Date(entry.nextSpawn);
-    if (isNaN(nextSpawn)) return;
+/* ======================
+   🔹 RESPONSIVE GRID
+====================== */
+function getGridColumns() {
+  const width = window.innerWidth;
+  if (width < 600) return 1;     // 📱 mobile
+  if (width < 900) return 2;     // 💊 tablet
+  if (width < 1400) return 3;    // 💻 small desktop
+  return 4;                      // 🖥️ large screen
+}
 
-    const now = new Date();
-    const diffMs = now - nextSpawn;
-
-    const lastProc = processedBosses.get(key);
-    if (lastProc && now - lastProc < 120000) return;
-
-    // ±45 seconds tolerance
-    if (diffMs >= -10000 && diffMs <= 60000) {
-      processedBosses.set(key, now);
-      const bossRef = ref(db, "bosses/" + key);
-
-      // Hour-based boss → reset spawn timer
-      if (entry.bossHour && !entry.bossSchedule) {
-        const newLastKilled = new Date();
-        const nextSpawnTime = new Date(newLastKilled.getTime() + entry.bossHour * 60 * 60 * 1000);
-
-        await update(bossRef, {
-          lastKilled: newLastKilled.toISOString(),
-          nextSpawn: nextSpawnTime.toISOString(),
-        });
-        console.log(`✅ Auto-reset done for ${entry.bossName}`);
-      }
-
-      // Fixed-schedule boss → delete entry after spawn
-      else if (entry.bossSchedule && !entry.bossHour) {
-        await remove(bossRef);
-        console.log(`🗑️ Auto-deleted schedule boss "${entry.bossName}" after spawn.`);
-      }
-
-      // Force refresh
-      setTimeout(monitorBosses, 2000);
+/* ======================
+   🔹 DASHBOARD RENDER
+====================== */
+async function fetchAndRenderBosses() {
+  try {
+    const snapshot = await get(ref(db, "bosses"));
+    if (!snapshot.exists()) {
+      dashboardCards.innerHTML = "<p>No bosses found</p>";
+      return;
     }
-  }
 
-  // ✅ Weekly repopulation
-  async function repopulateWeeklyScheduleBosses(force = false) {
-    try {
-      const now = new Date();
-      const day = now.getDay();
-      const hour = now.getHours();
-
-      if (!force && !(day === 1 && hour >= 1)) {
-        console.log("⏸️ Not Monday 1AM yet — skipping repopulation.");
-        return;
-      }
-
-      const bossesRef = ref(db, "bosses");
-      const snapshot = await get(bossesRef);
-      const existing = [];
-
-      if (snapshot.exists()) {
-        snapshot.forEach((child) => {
-          const b = child.val();
-          if (b.bossSchedule) existing.push(`${b.bossName}_${b.bossSchedule}`);
-        });
-      }
-
-      let added = 0;
-      for (const b of fixedScheduleBosses) {
-        const key = `${b.bossName}_${b.bossSchedule}`;
-        if (!existing.includes(key)) {
-          const next = getNextScheduledSpawn(b.bossSchedule);
-          await push(bossesRef, {
-            bossName: b.bossName,
-            guild: b.guild,
-            bossSchedule: b.bossSchedule,
-            nextSpawn: next ? next.toISOString() : "",
-            bossHour: "",
-            lastKilled: "",
-          });
-          added++;
-        }
-      }
-
-      console.log(added > 0 ? `🆕 Repopulated ${added} bosses.` : "✅ All fixed bosses already exist.");
-    } catch (err) {
-      console.error("⚠️ Repopulation error:", err);
-    }
-  }
-
-  // ✅ Toggle between hour/schedule mode
-  function updateSpawnTypeUI() {
-    if (spawnHourType.checked) {
-      hourGroup.style.display = "block";
-      lastKilledField.style.display = "block";
-      scheduleGroup.style.display = "none";
-      bossSchedule.value = "";
-    } else {
-      lastKilledField.style.display = "none";
-      hourGroup.style.display = "none";
-      scheduleGroup.style.display = "block";
-      bossHour.value = "";
-    }
-    calcNextSpawn();
-  }
-  spawnHourType.addEventListener("change", updateSpawnTypeUI);
-  spawnScheduleType.addEventListener("change", updateSpawnTypeUI);
-  updateSpawnTypeUI();
-
-  // ✅ Submit handler
-  bossForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const guildVal = document.getElementById("guild").value || "FACTION";
-    const entry = {
-      bossName: bossName.value.trim().toUpperCase(),
-      bossHour: spawnHourType.checked ? bossHour.value : "",
-      bossSchedule: spawnScheduleType.checked ? bossSchedule.value : "",
-      lastKilled: lastKilled.value,
-      nextSpawn: nextSpawn.value,
-      guild: guildVal,
-    };
-
-    const key = editKey.value;
-    if (key) await update(ref(db, "bosses/" + key), entry);
-    else await set(push(ref(db, "bosses")), entry);
-
-    bossForm.reset();
-    nextSpawn.value = "";
-    editKey.value = "";
-    bossModal.hide();
-  });
-
-  // ✅ Populate table
-  onValue(ref(db, "bosses"), (snapshot) => {
-    bossTable.innerHTML = "";
     const bosses = [];
-
-    snapshot.forEach((child) => {
-      const key = child.key;
-      const b = child.val();
-      b._key = key;
-
+    snapshot.forEach(childSnap => {
+      const b = childSnap.val();
+      b._key = childSnap.key;
       let ts = Date.parse(b.nextSpawn);
+      if (isNaN(ts) && typeof b.nextSpawn === "string") ts = Date.parse(b.nextSpawn.replace(" ", "T"));
       if (b.bossSchedule && !b.bossHour) {
         const nextDate = getNextScheduledSpawn(b.bossSchedule);
         ts = nextDate ? nextDate.getTime() : Infinity;
-        b.nextSpawn = nextDate ? nextDate.toLocaleString() : "--";
+        b.nextSpawn = nextDate ? nextDate.toISOString() : b.nextSpawn;
       }
-
       b._ts = isNaN(ts) ? Infinity : ts;
       bosses.push(b);
-
-      if (b.nextSpawn && b.nextSpawn !== "--") autoResetOrDeleteBoss(b, key);
     });
 
     bosses.sort((a, b) => a._ts - b._ts);
 
-    bosses.forEach((b) => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${b.bossName || "Unknown"}</td>
-        <td><span class="badge bg-secondary">${b.guild || "FFA"}</span></td>
-        <td>${b.bossHour || b.bossSchedule || "--"}</td>
-        <td>${b.lastKilled || "--"}</td>
-        <td>${b.nextSpawn || "--"}</td>
-        <td>
-          <button class="btn btn-info btn-sm edit-btn" data-key="${b._key}">Edit</button>
-          <button class="btn btn-warning btn-sm reset-btn" data-key="${b._key}">Reset</button>
-          <button class="btn btn-danger btn-sm delete-btn" data-id="${b._key}">Delete</button>
-        </td>`;
-      bossTable.appendChild(tr);
+    const now = new Date();
+    const today = now.getDate();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+
+    const groups = { soon: [], today: [], tomorrow: [], later: [] };
+
+    bosses.forEach(b => {
+      const nextDate = new Date(b._ts);
+      const diff = nextDate - now;
+      if (diff <= 10 * 60000 && diff > -5 * 60000) {
+        groups.soon.push(b);
+      } else if (nextDate.getDate() === today) {
+        groups.today.push(b);
+      } else if (nextDate.getDate() === tomorrow.getDate()) {
+        groups.tomorrow.push(b);
+      } else {
+        groups.later.push(b);
+      }
     });
 
-    // ✅ Clear form button
-    document.getElementById("btnAdd").addEventListener("click", clearBossForm);
-    function clearBossForm() {
-      bossForm.reset();
-      bossName.focus();
-      console.log("Form cleared successfully!");
-    }
+    dashboardCards.innerHTML = "";
 
-    // ✅ Manual repopulate button (safe duplicate-checked version)
-    const btnRepopulate = document.getElementById("btnRepopulate");
-    if (btnRepopulate) {
-      btnRepopulate.addEventListener("click", async () => {
-        if (!confirm("♻ Do you want to repopulate all fixed-schedule bosses now?")) return;
+    const sections = [
+      { label: "🕑 Spawning", color: "#66ff00ff", data: groups.soon },
+      { label: "🌞 Today", color: "#007bff", data: groups.today },
+      { label: "🌙 Tomorrow", color: "#6f42c1", data: groups.tomorrow },
+      { label: "🌅 Coming Soon", color: "#e98e07ff", data: groups.later },
+    ];
 
-        btnRepopulate.disabled = true;
-        const originalText = btnRepopulate.innerHTML;
-        btnRepopulate.innerHTML = "⏳ Repopulating...";
+    const gridCols = getGridColumns();
 
-        try {
-          const bossesRef = ref(db, "bosses");
-          const snapshot = await get(bossesRef);
-          const existing = [];
+    sections.forEach(section => {
+      if (section.data.length === 0) return;
 
-          if (snapshot.exists()) {
-            snapshot.forEach((child) => {
-              const b = child.val();
-              if (b.bossSchedule)
-                existing.push(`${b.bossName}_${b.bossSchedule}`.toUpperCase());
-            });
-          }
+      const sectionContainer = document.createElement("div");
+      sectionContainer.style.marginBottom = "2rem";
 
-          let added = 0;
-          for (const b of fixedScheduleBosses) {
-            const key = `${b.bossName}_${b.bossSchedule}`.toUpperCase();
-            if (!existing.includes(key)) {
-              const next = getNextScheduledSpawn(b.bossSchedule);
-              await push(bossesRef, {
-                bossName: b.bossName,
-                guild: b.guild,
-                bossSchedule: b.bossSchedule,
-                nextSpawn: next ? next.toISOString() : "",
-                bossHour: "",
-                lastKilled: "",
-              });
-              added++;
-            }
-          }
+      const header = document.createElement("h2");
+      header.textContent = section.label;
+      header.style.color = section.color;
+      header.style.fontWeight = "800";
+      header.style.fontSize = "1.3rem";
+      header.style.margin = "10px 0";
+      header.style.display = "flex";
+      header.style.alignItems = "center";
+      header.style.justifyContent = "space-between";
+      header.style.cursor = "pointer";
+      header.style.padding = "8px 12px";
+      header.style.borderBottom = `2px solid ${section.color}`;
+      header.style.background = "rgba(0,0,0,0.05)";
+      header.style.borderRadius = "6px";
 
-          alert(
-            added > 0
-              ? `✅ ${added} new boss${added > 1 ? "es" : ""} added successfully.`
-              : `✅ All fixed-schedule bosses already exist — no changes made.`
-          );
+      const toggle = document.createElement("span");
+      toggle.textContent = "▼";
+      toggle.style.transition = "transform 0.2s ease";
+      header.appendChild(toggle);
 
-          monitorBosses();
-        } catch (err) {
-          console.error("⚠️ Repopulate error:", err);
-          alert("⚠️ Something went wrong while repopulating!");
-        } finally {
-          btnRepopulate.disabled = false;
-          btnRepopulate.innerHTML = originalText;
+      const grid = document.createElement("div");
+      grid.className = "boss-grid";
+      grid.style.display = "grid";
+      grid.style.gridTemplateColumns = `repeat(${gridCols}, 1fr)`;
+      grid.style.gap = "1.2rem";
+      grid.style.margin = "10px auto";
+      grid.style.padding = "0 10px";
+      grid.style.overflow = "hidden";
+      grid.style.transition = "max-height 0.4s ease, opacity 0.4s ease";
+
+      section.data.forEach(b => grid.appendChild(createBossCard(b, section.color)));
+
+      header.addEventListener("click", () => {
+        if (grid.classList.contains("animating")) return;
+        grid.classList.add("animating");
+
+        const isCollapsed = grid.classList.contains("collapsed");
+
+        if (isCollapsed) {
+          grid.classList.remove("collapsed");
+          grid.style.display = "grid";
+          const fullHeight = grid.scrollHeight + "px";
+          grid.style.maxHeight = "0px";
+          grid.offsetHeight;
+          grid.style.maxHeight = fullHeight;
+          grid.style.opacity = "1";
+          toggle.style.transform = "rotate(0deg)";
+          setTimeout(() => {
+            grid.style.maxHeight = "none";
+            grid.classList.remove("animating");
+          }, 400);
+        } else {
+          const fullHeight = grid.scrollHeight + "px";
+          grid.style.maxHeight = fullHeight;
+          grid.offsetHeight;
+          grid.style.maxHeight = "0px";
+          grid.style.opacity = "0";
+          toggle.style.transform = "rotate(-90deg)";
+          setTimeout(() => {
+            grid.classList.add("collapsed");
+            grid.classList.remove("animating");
+            grid.style.display = "none";
+          }, 400);
         }
       });
-    }
 
+      sectionContainer.appendChild(header);
+      sectionContainer.appendChild(grid);
+      dashboardCards.appendChild(sectionContainer);
+    });
 
-    // ✅ Edit button
-    document.querySelectorAll(".edit-btn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const key = btn.dataset.key;
-        const bossRef = ref(db, "bosses/" + key);
-        const snap = await get(bossRef);
-        if (!snap.exists()) return alert("⚠️ Boss not found!");
-        const b = snap.val();
-
-        bossName.value = b.bossName || "";
-        bossHour.value = b.bossHour || "";
-        lastKilled.value = toDatetimeLocalInput(b.lastKilled);
-        nextSpawn.value = toDatetimeLocalInput(b.nextSpawn);
-        document.getElementById("guild").value = b.guild || "FFA";
-        editKey.value = key;
-
-        bossModal.show();
+    // 🔄 Responsive resize updates grid layout
+    window.addEventListener("resize", () => {
+      document.querySelectorAll(".boss-grid").forEach(grid => {
+        grid.style.gridTemplateColumns = `repeat(${getGridColumns()}, 1fr)`;
       });
     });
 
-    // ✅ Reset button
-    document.querySelectorAll(".reset-btn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const key = btn.dataset.key;
-        const bossRef = ref(db, "bosses/" + key);
-        const snap = await get(bossRef);
-        if (!snap.exists()) return alert("⚠️ Boss not found!");
-
-        const entry = snap.val();
-        if (!confirm(`Reset ${entry.bossName}?`)) return;
-
-        const now = new Date();
-        const nextSpawnTime = new Date(now.getTime() + entry.bossHour * 60 * 60 * 1000);
-        await update(bossRef, {
-          lastKilled: now.toISOString(),
-          nextSpawn: nextSpawnTime.toISOString(),
-        });
-
-        monitorBosses();
-      });
-    });
-
-    // ✅ Delete button
-    document.querySelectorAll(".delete-btn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        if (confirm("Delete this boss?")) {
-          await remove(ref(db, "bosses/" + btn.dataset.id));
-          monitorBosses();
-        }
-      });
-    });
-  });
-
-  // ✅ Continuous monitor
-  async function monitorBosses() {
-    const bossesRef = ref(db, "bosses");
-    const snapshot = await get(bossesRef);
-    if (!snapshot.exists()) return;
-
-    snapshot.forEach((child) => {
-      const key = child.key;
-      const b = child.val();
-      autoResetOrDeleteBoss(b, key);
-    });
+  } catch (err) {
+    console.error("Error loading bosses:", err);
+    dashboardCards.innerHTML = "<p>Error loading bosses</p>";
   }
 
-  // Run every 10 seconds
-  setInterval(monitorBosses, 10000);
-  window.addEventListener("load", () => {
-    repopulateWeeklyScheduleBosses();
-    monitorBosses();
-  });
+  function createBossCard(b, sectionColor = "#007bff") {
+    const card = document.createElement("div");
+    card.className = "boss-tile";
+    card.style.display = "flex";
+    card.style.flexDirection = "row";
+    card.style.alignItems = "center";
+    card.style.background = "#313030ff";
+    card.style.borderRadius = "12px";
+    card.style.overflow = "hidden";
+    card.style.boxShadow = "0 4px 10px rgba(0,0,0,0.1)";
+    card.style.height = "140px";
+    card.style.transition = "transform 0.2s ease";
+    card.style.borderLeft = `6px solid ${sectionColor}`;
+    card.style.gap = "8px";
+    card.style.padding = "4px";
 
-  // Expose manual repopulate
-  window.repopulateWeeklyScheduleBosses = repopulateWeeklyScheduleBosses;
+    card.addEventListener("mouseenter", () => (card.style.transform = "scale(1.03)"));
+    card.addEventListener("mouseleave", () => (card.style.transform = "scale(1)"));
+
+    const img = document.createElement("img");
+    const name = b.bossName?.toUpperCase().replace(/[^A-Z0-9]/g, "") || "";
+    img.src = `img/${name.toLowerCase()}.png`;
+    img.onerror = () => (img.src = "img/default.png");
+    img.alt = b.bossName;
+    img.style.width = "100px";
+    img.style.height = "100%";
+    img.style.objectFit = "cover";
+    card.appendChild(img);
+
+    const info = document.createElement("div");
+    info.style.flex = "1";
+    info.style.padding = "10px 14px";
+    // info.style.display = "flex";
+    info.style.flexDirection = "column";
+    info.style.justifyContent = "center";
+
+    const guild = b.guild || "FFA";
+    const guildTag = document.createElement("span");
+    guildTag.textContent = guild;
+    guildTag.className = `guild-badge ${guild}`;
+    guildTag.style.display = "inline-block";
+    guildTag.style.padding = "2px 8px";
+    guildTag.style.borderRadius = "6px";
+    guildTag.style.fontSize = "0.75em";
+    guildTag.style.fontWeight = "600";
+    guildTag.style.marginBottom = "4px";
+    info.appendChild(guildTag);
+
+    const title = document.createElement("h3");
+    title.textContent = b.bossName || "Unknown";
+    title.style.fontWeight = "700";
+    title.style.fontSize = "17px";
+    info.appendChild(title);
+
+    const nextDate = b._ts !== Infinity ? new Date(b._ts) : null;
+    const spawnDisplay = nextDate
+      ? nextDate.toLocaleString([], { dateStyle: "short", timeStyle: "short" })
+      : "--";
+
+    const countdown = document.createElement("span");
+    countdown.className = "countdown";
+    countdown.style.fontWeight = "700";
+    countdown.style.fontSize = ".85em";
+    info.appendChild(countdown);
+
+    const spawnInfo = document.createElement("p");
+    spawnInfo.innerHTML = `<span style="color:#aaa; font-weight:bold">Spawn:</span> <strong>${spawnDisplay}</strong>`;
+    spawnInfo.style.fontSize = "1em";
+    info.appendChild(spawnInfo);
+
+    card.appendChild(info);
+
+    if (nextDate) {
+      const originalColor = sectionColor;
+      setInterval(() => {
+        const diff = nextDate - new Date();
+        if (diff <= 0 && diff > -5 * 60000) {
+          countdown.textContent = "SPAWNING NOW!";
+          countdown.style.color = "red";
+          card.style.borderLeftColor = "red";
+        } else if (diff > 0 && diff <= 10 * 60000) {
+          countdown.textContent = formatCountdown(nextDate);
+          countdown.style.color = "#ff9900";
+          card.style.borderLeftColor = "#ff9900";
+        } else if (diff > 0) {
+          countdown.textContent = formatCountdown(nextDate);
+          countdown.style.color = originalColor;
+          card.style.borderLeftColor = originalColor;
+        } else {
+          countdown.textContent = "Spawn Passed";
+          countdown.style.color = "#777";
+          card.style.borderLeftColor = "#777";
+        }
+      }, 1000);
+    }
+
+    return card;
+  }
+}
+
+
+
+export async function initBossList() {
+  // Wait until the boss list table exists before rendering
+  await waitForElement("#bossTableBody");
+  fetchAndRenderBosses();
+}
+
+function waitForElement(selector) {
+  return new Promise(resolve => {
+    const el = document.querySelector(selector);
+    if (el) return resolve(el);
+    const obs = new MutationObserver(() => {
+      const el = document.querySelector(selector);
+      if (el) {
+        obs.disconnect();
+        resolve(el);
+      }
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+  });
 }

@@ -8,9 +8,12 @@ const firebaseConfig = {
   projectId: "boss-tracker-5488e",
   storageBucket: "boss-tracker-5488e.firebasestorage.app",
   messagingSenderId: "285894450263",
-  appId: "1:285894450263:web:444e346cd7d50d8a181712",
-  measurementId: "G-LB9Z0Y1CL3"
+  appId: "1:285894450263:web:444e346cd7d50d8a181712"
 };
 
-export const app = initializeApp(firebaseConfig);
-export const db = getDatabase(app);
+// ✅ Initialize Firebase app
+const app = initializeApp(firebaseConfig);
+
+// ✅ Initialize Realtime Database and export it
+const db = getDatabase(app);
+export { db };
