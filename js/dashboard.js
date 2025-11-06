@@ -7,6 +7,13 @@ const dashboardSection = document.getElementById("dashboardSection");
 const bossListContainer = document.getElementById("bossListContainer");
 const dashboardCards = document.getElementById("dashboardCards");
 
+const navToggle = document.querySelector(".nav-toggle");
+const navLinks = document.querySelector(".nav-links");
+
+navToggle.addEventListener("click", () => {
+  navLinks.classList.toggle("show");
+});
+
 let isAuthorized = false;
 
 /* ======================
@@ -171,9 +178,6 @@ async function fetchAndRenderBosses() {
 
       const grid = document.createElement("div");
       grid.className = "boss-grid";
-      grid.style.display = "grid";
-      grid.style.gridTemplateColumns = "repeat(4, 1fr)";
-      grid.style.gap = "1.2rem";
       grid.style.margin = "10px auto";
       grid.style.padding = "0 10px";
       grid.style.overflow = "hidden";
@@ -233,17 +237,8 @@ async function fetchAndRenderBosses() {
 
   function createBossCard(b, sectionColor = "#007bff") {
     const card = document.createElement("div");
-    card.className = "boss-tile";
-    card.style.display = "flex";
-    card.style.flexDirection = "row";
-    card.style.alignItems = "center";
-    card.style.background = "#313030ff";
-    card.style.borderRadius = "12px";
-    card.style.overflow = "hidden";
-    card.style.boxShadow = "0 4px 10px rgba(0,0,0,0.1)";
-    card.style.height = "140px";
-    card.style.transition = "transform 0.2s ease";
-    card.style.borderLeft = `6px solid ${sectionColor}`;
+    card.className = "boss-tile"; // CSS handles layout and responsiveness
+    card.style.borderLeft = `6px solid ${sectionColor}`; // dynamic color only
 
     card.addEventListener("mouseenter", () => card.style.transform = "scale(1.03)");
     card.addEventListener("mouseleave", () => card.style.transform = "scale(1)");
@@ -266,55 +261,41 @@ async function fetchAndRenderBosses() {
     const img = document.createElement("img");
     img.src = imgSrc;
     img.alt = b.bossName;
-    img.style.width = "100px";
-    img.style.height = "100%";
-    img.style.objectFit = "cover";
-    img.style.borderRight = "4px solid rgba(0,0,0,0.05)";
+    img.className = "boss-tile-img"; // CSS handles width, height, object-fit
     card.appendChild(img);
 
     const info = document.createElement("div");
-    info.style.flex = "1";
-    info.style.padding = "10px 14px";
-    info.style.display = "flex";
-    info.style.flexDirection = "column";
-    info.style.justifyContent = "center";
+    info.className = "boss-tile-info"; // CSS handles padding and flex layout
+    card.appendChild(info);
 
+    // Guild badge
     const guild = b.guild || "FFA";
     const guildTag = document.createElement("span");
     guildTag.textContent = guild;
     guildTag.className = `guild-badge ${guild}`;
-    guildTag.style.display = "inline-block";
-    guildTag.style.padding = "2px 8px";
-    guildTag.style.borderRadius = "6px";
-    guildTag.style.fontSize = "0.75em";
-    guildTag.style.fontWeight = "600";
-    guildTag.style.marginBottom = "4px";
     info.appendChild(guildTag);
 
+    // Boss title
     const title = document.createElement("h3");
     title.textContent = b.bossName || "Unknown";
-    title.style.fontWeight = "700";
-    title.style.fontSize = "17px";
     info.appendChild(title);
 
+    // Countdown
     const nextDate = b._ts !== Infinity ? new Date(b._ts) : null;
+    const countdown = document.createElement("span");
+    countdown.className = "countdown";
+    info.appendChild(countdown);
+
+    // Spawn info
     const spawnDisplay = nextDate
       ? nextDate.toLocaleString([], { dateStyle: "short", timeStyle: "short" })
       : "--";
 
-    const countdown = document.createElement("span");
-    countdown.className = "countdown";
-    countdown.style.fontWeight = "700";
-    countdown.style.fontSize = ".85em";
-    info.appendChild(countdown);
-
     const spawnInfo = document.createElement("p");
     spawnInfo.innerHTML = `<span style="color:#666; font-weight:bold">Spawn:</span> <strong>${spawnDisplay}</strong>`;
-    spawnInfo.style.fontSize = "1.1em";
     info.appendChild(spawnInfo);
 
-    card.appendChild(info);
-
+    // Countdown update interval
     if (nextDate) {
       const originalColor = sectionColor;
       setInterval(() => {
@@ -328,19 +309,20 @@ async function fetchAndRenderBosses() {
           countdown.style.color = "#ff9900";
           card.style.borderLeftColor = "#ff9900";
         } else if (diff > 0) {
-          // 🟦 Normal upcoming spawn
           countdown.textContent = formatCountdown(nextDate);
-          countdown.style.color = originalColor; // ✅ match section color
-          card.style.borderLeftColor = originalColor; // ✅ restore section color
-        }else {
+          countdown.style.color = originalColor;
+          card.style.borderLeftColor = originalColor;
+        } else {
           countdown.textContent = "Spawn Passed";
           countdown.style.color = "#777";
           card.style.borderLeftColor = "#777";
         }
       }, 1000);
     }
+
     return card;
   }
+
 }
 
 window.addEventListener("load", fetchAndRenderBosses);
