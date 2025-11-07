@@ -322,7 +322,6 @@ h2.section-header.collapsed span {
   .boss-tile h3 {
     font-size: 1rem;
     margin: 4px 0;
-    color: #000;
   }
 
   .boss-tile p,
@@ -414,3 +413,4 @@ main {
   text-align: left;
 
 }
+
