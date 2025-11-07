@@ -69,6 +69,14 @@ body {
   color: #fff;
 }
 
+.modal-header .modal-title {
+  color: #000;
+}
+
+.modal-body label{
+  color: #000;
+}
+
 /* ===================================
    📄 CONTENT
 =================================== */
@@ -404,4 +412,5 @@ main {
 
 .card .card-body, .card p, .card h3 {
   text-align: left;
+
 }
