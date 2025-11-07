@@ -250,14 +250,14 @@ async function fetchAndRenderBosses() {
 
     const bossImageMap = {
       VENATUS: "img/venatus.png", VIORENT: "img/viorent.png", EGO: "img/ego.png",
-      LIVERA: "img/livera.png", ARANEO: "img/araneo.png", NEUTRO: "img/neutro.png",
+      LIVERA: "img/livera_fool.png", ARANEO: "img/araneo.png", NEUTRO: "img/neutro.png",
       SAPHIRUS: "img/saphirus.png", THYMELE: "img/thymele.png", UNDOMIEL: "img/undomiel.png",
       WANNITAS: "img/wannitas.png", DUPLICAN: "img/duplican.png", METUS: "img/metus.png",
       AMENTIS: "img/amentis.png", CLEMANTIS: "img/clemantis.png", TITORE: "img/titore.png",
       GARETH: "img/gareth.png", LADYDALIA: "img/lady_dalia.png", GENAQULUES: "img/gen_aquleus.png",
-      GENERALAQULES: "img/gen_aquleus.png", AURAQ: "img/auraq.png", MILAVY: "img/milavy.png",
-      CHAIFLOCK: "img/chaiflock.png", RODERICK: "img/roderick.png", RINGOR: "img/ringor.png",
-      BENJI: "img/benji.png",
+      GENERALAQULES: "img/gen_aquleus.png", AURAQ: "img/auraq_fool.png", MILAVY: "img/milavy.png",
+      CHAIFLOCK: "img/chaiflock.png", RODERICK: "img/roderick_fool.png", RINGOR: "img/ringor.png",
+      BENJI: "img/benji_fool.png", SHULIAR: "img/shuliar.png", LARBA: "img/larba_fool.png",
     };
 
     const normalizedName = b.bossName?.toUpperCase().replace(/[^A-Z0-9]/g, "") || "";
@@ -347,3 +347,4 @@ async function fetchAndRenderBosses() {
 
 window.addEventListener("load", fetchAndRenderBosses);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) fetchAndRenderBosses(); });
+
