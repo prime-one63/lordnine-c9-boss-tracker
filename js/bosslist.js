@@ -235,6 +235,16 @@ export function initBossList() {
     bossModal.hide();
   });
 
+  // ✅ Clear form button
+  document.getElementById("btnAdd").addEventListener("click", clearBossForm);
+  function clearBossForm() {
+    bossForm.reset();
+    bossName.focus();
+    editKey.value = ""; // ✅ reset edit mode
+    nextSpawn.value = "";
+    console.log("Form cleared successfully!");
+  }
+
   // ✅ Populate table
   onValue(ref(db, "bosses"), (snapshot) => {
     bossTable.innerHTML = "";
@@ -275,14 +285,6 @@ export function initBossList() {
         </td>`;
       bossTable.appendChild(tr);
     });
-
-    // ✅ Clear form button
-    document.getElementById("btnAdd").addEventListener("click", clearBossForm);
-    function clearBossForm() {
-      bossForm.reset();
-      bossName.focus();
-      console.log("Form cleared successfully!");
-    }
 
     // ✅ Manual repopulate button (safe duplicate-checked version)
     const btnRepopulate = document.getElementById("btnRepopulate");
@@ -418,3 +420,4 @@ export function initBossList() {
   // Expose manual repopulate
   window.repopulateWeeklyScheduleBosses = repopulateWeeklyScheduleBosses;
 }
+
