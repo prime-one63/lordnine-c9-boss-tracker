@@ -171,9 +171,6 @@ async function fetchAndRenderBosses() {
 
       const grid = document.createElement("div");
       grid.className = "boss-grid";
-      grid.style.display = "grid";
-      grid.style.gridTemplateColumns = "repeat(4, 1fr)";
-      grid.style.gap = "1.2rem";
       grid.style.margin = "10px auto";
       grid.style.padding = "0 10px";
       grid.style.overflow = "hidden";
@@ -347,4 +344,5 @@ async function fetchAndRenderBosses() {
 
 window.addEventListener("load", fetchAndRenderBosses);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) fetchAndRenderBosses(); });
+
 
