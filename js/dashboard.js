@@ -247,7 +247,7 @@ async function fetchAndRenderBosses() {
 
     const bossImageMap = {
       VENATUS: "img/venatus.png", VIORENT: "img/viorent.png", EGO: "img/ego.png",
-      LIVERA: "img/livera_fool.png", ARANEO: "img/araneo.png", NEUTRO: "img/neutro.png",
+      LIVERA: "img/livera_fool.png", ARANEO: "img/araneo.png", NEUTRO: "img/neutro_fool.png",
       SAPHIRUS: "img/saphirus.png", THYMELE: "img/thymele.png", UNDOMIEL: "img/undomiel.png",
       WANNITAS: "img/wannitas.png", DUPLICAN: "img/duplican.png", METUS: "img/metus.png",
       AMENTIS: "img/amentis.png", CLEMANTIS: "img/clemantis.png", TITORE: "img/titore.png",
@@ -344,5 +344,6 @@ async function fetchAndRenderBosses() {
 
 window.addEventListener("load", fetchAndRenderBosses);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) fetchAndRenderBosses(); });
+
 
 
