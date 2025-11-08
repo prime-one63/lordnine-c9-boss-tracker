@@ -255,6 +255,7 @@ async function fetchAndRenderBosses() {
       GENERALAQULES: "img/gen_aquleus.png", AURAQ: "img/auraq_fool.png", MILAVY: "img/milavy.png",
       CHAIFLOCK: "img/chaiflock.png", RODERICK: "img/roderick_fool.png", RINGOR: "img/ringor.png",
       BENJI: "img/benji_fool.png", SHULIAR: "img/shuliar.png", LARBA: "img/larba_fool.png",
+      GENAQULEUS: "img/gen_aquleus.png", BARON: "img/baron_fool.png",
     };
 
     const normalizedName = b.bossName?.toUpperCase().replace(/[^A-Z0-9]/g, "") || "";
@@ -344,6 +345,7 @@ async function fetchAndRenderBosses() {
 
 window.addEventListener("load", fetchAndRenderBosses);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) fetchAndRenderBosses(); });
+
 
 
 
